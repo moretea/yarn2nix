@@ -1,12 +1,11 @@
-{ pkgs ? import <nixpkgs> {},
-  y2nPkgs ? import ../. {} }:
+{ yarn2nix ? import ../. {} }:
 
 let
-  inherit (y2nPkgs) yarn2nix;
-  inherit (pkgs.yarn2nix-moretea) mkYarnPackage;
-  inherit (pkgs) fetchFromGitHub;
+  inherit (yarn2nix) mkYarnPackage;
+  inherit (yarn2nix.pkgs) fetchFromGitHub;
+in
 
-in {
+{
   no-import-from-derivation = import ./no-import-from-derivation {
     inherit mkYarnPackage fetchFromGitHub;
   };

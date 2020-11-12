@@ -1,9 +1,9 @@
-{ mkYarnPackage, defaultYarnFlags }:
+{ yarn2nix }:
 
-mkYarnPackage {
+yarn2nix.mkYarnPackage {
   src = ./.;
 
-  yarnFlags = defaultYarnFlags ++ ["--production=true"];
+  yarnFlags = yarn2nix.defaultYarnFlags ++ ["--production=true"];
 
   buildPhase = ''
     source ${../../nix/expectShFunctions.sh}

@@ -19,6 +19,7 @@ Options:
   --no-patch          Don't patch the lockfile if hashes are missing
   --lockfile=FILE     Specify path to the lockfile [default: ./yarn.lock].
   --builtin-fetchgit  Use builtin fetchGit for git dependencies to support on-the-fly generation of yarn.nix without an internet connection
+  --fetch-meta=DEPS   Specify dependencies where fetching dependencies is needed.
 `
 
 const options = docopt(USAGE)
@@ -57,9 +58,23 @@ const pkgs = R.pipe(
   mapObjIndexedReturnArray((value, key) => ({
     ...value,
     nameWithVersion: key,
+    alternates:      [],
   })),
-  R.uniqBy(R.prop('resolved')),
+  R.uniqBy(R.props(['resolved', 'version'])),
 )(json.object)
+
+Object.keys(pkgs).forEach(name => {
+  const resolved = pkgs[name].resolved
+  const name_ = pkgs[name].nameWithVersion
+  Object.keys(json.object).forEach(resolvedName => {
+    if (name_ == resolvedName) {
+      return
+    }
+    if (json.object[resolvedName].resolved == resolved) {
+      pkgs[name].alternates.push(resolvedName)
+    }
+  })
+})
 
 const fixedPkgsPromises = R.map(fixPkgAddMissingSha1, pkgs)
 
@@ -79,9 +94,19 @@ const fixedPkgsPromises = R.map(fixPkgAddMissingSha1, pkgs)
     fs.writeFileSync(options['--lockfile'], lockfile.stringify(json.object))
   }
 
+  if (options['--builtin-fetchgit']) {
+    console.error('Using --builtin-fetchgit is currently unsupported!')
+    process.exit(1)
+  }
   if (!options['--no-nix']) {
+    const result = await generateNix(
+      fixedPkgs,
+      options['--builtin-fetchgit'],
+      (options['--fetch-meta'] || "").split(","),
+    )
+
     // print to stdout
-    console.log(generateNix(fixedPkgs, options['--builtin-fetchgit']))
+    console.log(result)
   }
 })().catch(error => {
   console.error(error)
